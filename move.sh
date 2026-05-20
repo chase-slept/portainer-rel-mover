@@ -5,6 +5,7 @@
 # a more conventional naming scheme
 
 datapath=/data/compose
+target=/mnt/data/docker
 
 function path {
     # uses 'find' to print Portainer's data directory structure 
@@ -38,5 +39,27 @@ function result {
     done
 }
 
+function copy_files {
+    # process output 
+    while IFS= read -r line; do
+        echo "processing... $line"
+        cname=$(awk '{print $1}' <<< $line) # print first column to var 
+        ppath=$(awk '{print $2}' <<< $line) # second column
+        #echo "$cname - $ppath" #debug
+        cp -arf "$ppath" "$target"
+    done <<< "$output" 
+}
 
-echo "$(result)"
+
+output="$(result)"
+#echo "$output" # debug
+
+# stop docker for file backup
+systemctl mask docker.socket
+systemctl stop docker.service
+
+copy_files
+
+systemctl unmask docker.socket
+systemctl reset-failed docker.service
+systemctl start docker.service
